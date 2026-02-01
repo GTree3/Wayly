@@ -62,3 +62,5 @@ export const getAccessibilityInsights = async (
     return "Wayly recommends the most accessible path based on your functional movement needs.";
   }
 };
+
+

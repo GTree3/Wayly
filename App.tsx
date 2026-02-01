@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, Polyline } from 'react-leaflet';
 import L from 'leaflet';
@@ -175,16 +174,40 @@ const SettingsModal: React.FC<{ profile: UserProfile; setProfile: (p: UserProfil
 
 // --- Map Controllers ---
 
-const ChangeView: React.FC<{ center: [number, number]; zoom: number }> = ({ center, zoom }) => {
+const MapController: React.FC<{
+  view: AppView;
+  userLocation: [number, number];
+}> = ({ view, userLocation }) => {
   const map = useMap();
+
   useEffect(() => {
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       map.invalidateSize();
-      map.setView(center, zoom, { animate: false });
-    }, 0);
-  }, [center, zoom, map]);
+      let sheetHeight = 0;
+      switch (view) {
+        case 'home': sheetHeight = 160; break;
+        case 'search': sheetHeight = 360; break;
+        case 'routing': sheetHeight = 480; break;
+      }
+      
+      const userBounds = L.latLngBounds([userLocation]);
+
+      map.fitBounds(userBounds, {
+        paddingBottomRight: [0, sheetHeight],
+        paddingTopLeft: [0, 150],        // ⬅️ pushes map DOWN (avoid search bar)
+        maxZoom: map.getZoom(), // This preserves the user's current zoom level
+        animate: true,
+        duration: 0.75,
+      });
+
+    }, 100); // Debounce to allow UI to transition smoothly
+
+    return () => clearTimeout(timer);
+  }, [view, userLocation, map]);
+
   return null;
 };
+
 
 // --- App Root ---
 
@@ -383,7 +406,7 @@ export default function WaylyApp() {
       <div className="flex-1 w-full bg-[#f8f9fa] z-0">
         <MapContainer center={userLocation} zoom={16} scrollWheelZoom={true} zoomControl={false} className="grayscale-[0.1]">
           <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager_labels_under/{z}/{x}/{y}{r}.png" />
-          <ChangeView center={activeTarget ? [activeTarget.geometry.coordinates[1], activeTarget.geometry.coordinates[0]] : userLocation} zoom={16} />
+          <MapController view={view} userLocation={userLocation} />
           
           <Marker position={userLocation} icon={new L.DivIcon({
             className: 'bg-transparent',
@@ -447,7 +470,7 @@ export default function WaylyApp() {
             <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
               {filteredWashrooms.map(wr => (
                 <div key={wr.properties.fid} className="flex gap-4 p-3 rounded-2xl hover:bg-gray-50 transition-colors cursor-pointer border border-gray-50" onClick={() => { setSelectedRestroom(wr); setView('routing'); }}>
-                  <div className="w-20 h-20 bg-gray-100 rounded-2xl shrink-0 overflow-hidden"><img src={wr.properties.imageUrl || `https://picsum.photos/seed/wr-${wr.properties.fid}/200/200`} className="w-full h-full object-cover" alt="Washroom" /></div>
+                  <div className="w-20 h-20 bg-gray-100 rounded-2xl shrink-0 overflow-hidden"><img src={wr.properties.imageUrl || `https://picsum.photos/seed/wr-${wr.properties.fid}/200/200`} className="w-full h-full object-cover" alt="Washroom" loading="lazy" /></div>
                   <div className="flex-1">
                     <h4 className="font-bold text-gray-900">{wr.properties.name}</h4>
                     <p className="text-[10px] text-gray-500 mt-1 line-clamp-2 italic">{wr.properties.addy}</p>
@@ -463,63 +486,65 @@ export default function WaylyApp() {
         )}
 
         {view === 'routing' && activeTarget && (
-          <div className="p-6 h-full flex flex-col">
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <h3 className="text-xl font-extrabold text-gray-900 leading-tight">{activeTarget.properties.name}</h3>
-                <p className="text-xs text-gray-500 font-medium mt-1">Source: {activeTarget.properties.source}</p>
-              </div>
-              <button onClick={() => setView('search')} className="p-2.5 bg-gray-100 rounded-full text-gray-500"><X className="w-5 h-5" /></button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
-              <div className="mb-5 bg-blue-600 rounded-[24px] p-4 flex gap-4 shadow-xl shadow-blue-50 relative">
-                <div className="shrink-0 p-2.5 bg-white/20 text-white rounded-2xl h-fit"><Info className="w-5 h-5" /></div>
-                <div>
-                    <h4 className="text-[10px] font-black text-white/70 uppercase tracking-widest mb-1">Wayly Insight</h4>
-                    <div className="text-[13px] text-white font-medium leading-tight min-h-[3em]">
-                      {loadingInsights ? (
-                        <span className="flex items-center gap-2 animate-pulse">
-                          Thinking...
-                        </span>
-                      ) : insights}
+          <div className="h-full flex flex-col">
+              <div className="px-6 pt-2 pb-4 shrink-0">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="text-xl font-extrabold text-gray-900 leading-tight">{activeTarget.properties.name}</h3>
+                      <p className="text-xs text-gray-500 font-medium mt-1">Source: {activeTarget.properties.source}</p>
                     </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 mb-6">
-                {routes.map(r => (
-                  <div 
-                    key={r.type}
-                    onClick={() => setSelectedRestroom(r.target)}
-                    className={`flex flex-col p-4 rounded-3xl border-2 transition-all cursor-pointer ${activeTarget.properties.fid === r.target.properties.fid && (r.type === 'fastest' ? 'bg-blue-50 border-blue-600' : 'bg-green-50 border-green-600') || 'bg-white border-gray-100 opacity-60'}`}
-                  >
-                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center mb-2 ${r.type === 'fastest' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600'}`}>
-                      {r.type === 'fastest' ? <Clock className="w-4 h-4" /> : <Accessibility className="w-4 h-4" />}
-                    </div>
-                    <div className="text-xl font-black text-gray-900">{r.duration}</div>
-                    <div className="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">{r.type === 'fastest' ? 'FASTEST' : 'ACCESSIBLE'}</div>
-                    <p className="text-[10px] font-bold text-gray-700 mt-2 line-clamp-1">{r.target.properties.name}</p>
+                    <button onClick={() => setView('search')} className="p-2.5 bg-gray-100 rounded-full text-gray-500"><X className="w-5 h-5" /></button>
                   </div>
-                ))}
               </div>
 
-              {profile.movement.maxWalkingDistance && activeTarget.properties.baseDistance && activeTarget.properties.baseDistance > profile.movement.maxWalkingDistance && (
-                <div className="bg-red-50 p-3 rounded-2xl border border-red-100 mb-4 flex gap-3 items-center">
-                  <AlertCircle className="w-5 h-5 text-red-500" />
-                  <p className="text-[11px] text-red-700 font-bold">Exceeds your preferred distance limit.</p>
+              <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-5 no-scrollbar">
+                <div className="bg-blue-600 rounded-[24px] p-4 flex gap-4 shadow-xl shadow-blue-50 relative">
+                  <div className="shrink-0 p-2.5 bg-white/20 text-white rounded-2xl h-fit"><Info className="w-5 h-5" /></div>
+                  <div>
+                      <h4 className="text-[10px] font-black text-white/70 uppercase tracking-widest mb-1">Wayly Insight</h4>
+                      <div className="text-[13px] text-white font-medium leading-tight min-h-[3em]">
+                        {loadingInsights ? (
+                          <span className="flex items-center gap-2 animate-pulse">
+                            Thinking...
+                          </span>
+                        ) : insights}
+                      </div>
+                  </div>
                 </div>
-              )}
 
-              <div className="bg-gray-50 p-3 rounded-2xl border border-gray-100 mb-6">
-                <h4 className="text-[10px] font-bold text-gray-400 uppercase mb-1">Local Knowledge</h4>
-                <p className="text-xs text-gray-700 leading-tight">"{activeTarget.properties.notes}"</p>
+                <div className="grid grid-cols-2 gap-3">
+                  {routes.map(r => (
+                    <div 
+                      key={r.type}
+                      onClick={() => setSelectedRestroom(r.target)}
+                      className={`flex flex-col p-4 rounded-3xl border-2 transition-all cursor-pointer ${activeTarget.properties.fid === r.target.properties.fid && (r.type === 'fastest' ? 'bg-blue-50 border-blue-600' : 'bg-green-50 border-green-600') || 'bg-white border-gray-100 opacity-60'}`}
+                    >
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center mb-2 ${r.type === 'fastest' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600'}`}>
+                        {r.type === 'fastest' ? <Clock className="w-4 h-4" /> : <Accessibility className="w-4 h-4" />}
+                      </div>
+                      <div className="text-xl font-black text-gray-900">{r.duration}</div>
+                      <div className="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">{r.type === 'fastest' ? 'FASTEST' : 'ACCESSIBLE'}</div>
+                      <p className="text-[10px] font-bold text-gray-700 mt-2 line-clamp-1">{r.target.properties.name}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {profile.movement.maxWalkingDistance && activeTarget.properties.baseDistance && activeTarget.properties.baseDistance > profile.movement.maxWalkingDistance && (
+                  <div className="bg-red-50 p-3 rounded-2xl border border-red-100 flex gap-3 items-center">
+                    <AlertCircle className="w-5 h-5 text-red-500" />
+                    <p className="text-[11px] text-red-700 font-bold">Exceeds your preferred distance limit.</p>
+                  </div>
+                )}
+
+                <div className="bg-gray-50 p-3 rounded-2xl border border-gray-100">
+                  <h4 className="text-[10px] font-bold text-gray-400 uppercase mb-1">Local Knowledge</h4>
+                  <p className="text-xs text-gray-700 leading-tight">"{activeTarget.properties.notes}"</p>
+                </div>
+
+                <button className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-lg flex items-center justify-center gap-3 shadow-xl active:scale-[0.98] transition-all">
+                  <Navigation className="w-5 h-5 fill-current" /> START
+                </button>
               </div>
-
-              <button className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-lg flex items-center justify-center gap-3 shadow-xl active:scale-[0.98] transition-all">
-                <Navigation className="w-5 h-5 fill-current" /> START
-              </button>
-            </div>
           </div>
         )}
       </div>

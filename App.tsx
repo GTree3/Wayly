@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, Polyline } from 'react-leaflet';
 import L from 'leaflet';
 import { 
@@ -196,6 +196,9 @@ export default function WaylyApp() {
   const [insights, setInsights] = useState<string>('');
   const [loadingInsights, setLoadingInsights] = useState(false);
   
+  // Cache for insights to avoid 429 errors
+  const [insightsCache, setInsightsCache] = useState<Record<string, string>>({});
+  
   const [profile, setProfile] = useState<UserProfile>({
     movement: {
       usesWheels: false,
@@ -203,7 +206,7 @@ export default function WaylyApp() {
       avoidStairs: false,
       preferRamps: false
     },
-    speed: 'normal',
+    speed: 'comfortable',
     needsChangingTable: false,
     genderPreference: 'any'
   });
@@ -222,30 +225,24 @@ export default function WaylyApp() {
     });
   }, [activeFilters]);
 
-  // Routing Logic updated for functional MovementNeeds
+  // Routing Logic
   const routes = useMemo((): RouteOption[] => {
     if (view !== 'routing') return [];
     
     const speedFactor = profile.speed === 'slow' ? 0.6 : (profile.speed === 'fast' ? 1.4 : 1.0);
-    // Wheels are generally slower in complex urban terrain unless electric
     const movementMultiplier = profile.movement.usesWheels ? 0.75 : 1.0;
     
-    // Base speed calculation
     const calculateTime = (dist: number) => Math.max(1, Math.round(dist / (60 * speedFactor * movementMultiplier)));
 
-    // Sort by distance for fastest
     const sortedByDistance = [...MOCK_WASHROOMS.features].sort((a, b) => (a.properties.baseDistance || 0) - (b.properties.baseDistance || 0));
     const fastestDest = sortedByDistance[0];
     
-    // Find most accessible based on avoidStairs/preferRamps
     const sortedByAccessibility = [...MOCK_WASHROOMS.features].sort((a, b) => {
-      // Priority 1: wheelchair property matches avoidStairs requirement
       if (profile.movement.avoidStairs) {
         if (a.properties.wheelchair !== b.properties.wheelchair) {
           return a.properties.wheelchair ? -1 : 1;
         }
       }
-      // Priority 2: high accessibility score
       return (b.properties.accessibilityScore || 0) - (a.properties.accessibilityScore || 0);
     });
     
@@ -275,15 +272,31 @@ export default function WaylyApp() {
 
   const generateInsights = useCallback(async () => {
     if (!activeTarget) return;
+
+    // Create a cache key based on the target and profile movement needs
+    const cacheKey = `${activeTarget.properties.fid}-${JSON.stringify(profile.movement)}-${profile.speed}`;
+    
+    if (insightsCache[cacheKey]) {
+      setInsights(insightsCache[cacheKey]);
+      return;
+    }
+
     setLoadingInsights(true);
     const text = await getAccessibilityInsights(profile, activeTarget, routes);
+    
+    // Store in cache
+    setInsightsCache(prev => ({ ...prev, [cacheKey]: text }));
     setInsights(text);
     setLoadingInsights(false);
-  }, [profile, activeTarget, routes]);
+  }, [profile, activeTarget, routes, insightsCache]);
 
   useEffect(() => {
     if (view === 'routing' && activeTarget) {
-      generateInsights();
+      // Small debounce to prevent rapid fire calls if user clicks markers quickly
+      const timer = setTimeout(() => {
+        generateInsights();
+      }, 300);
+      return () => clearTimeout(timer);
     }
   }, [activeTarget, view, generateInsights]);
 
@@ -463,9 +476,13 @@ export default function WaylyApp() {
                <div className="shrink-0 p-2.5 bg-white/20 text-white rounded-2xl h-fit"><Info className="w-5 h-5" /></div>
                <div>
                   <h4 className="text-[10px] font-black text-white/70 uppercase tracking-widest mb-1">Wayly Insight</h4>
-                  <p className="text-[13px] text-white font-medium leading-tight">
-                    {loadingInsights ? "Calculating terrain impact..." : insights}
-                  </p>
+                  <div className="text-[13px] text-white font-medium leading-tight min-h-[3em]">
+                    {loadingInsights ? (
+                      <span className="flex items-center gap-2 animate-pulse">
+                         Thinking...
+                      </span>
+                    ) : insights}
+                  </div>
                </div>
             </div>
 

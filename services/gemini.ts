@@ -8,6 +8,8 @@ export const getAccessibilityInsights = async (
   routes: RouteOption[]
 ): Promise<string> => {
   try {
+    /* Initialize GoogleGenAI with the API key from environment variables. 
+       Always create a fresh instance before calling to ensure latest config. */
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     const fastest = routes.find(r => r.type === 'fastest');
@@ -36,18 +38,27 @@ export const getAccessibilityInsights = async (
       Be concise (max 2 sentences), friendly, and avoid identity-based labels.
     `;
 
+    /* Generate content using gemini-3-flash-preview. 
+       We rely on the model's default output limits for simple text reasoning tasks. */
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-2.5-flash',
       contents: prompt,
       config: {
         temperature: 0.7,
-        maxOutputTokens: 120
+        /* Recommendation: Avoid setting maxOutputTokens if not required to prevent truncated responses. */
       }
     });
 
+    /* Directly accessing the .text property from the response as per Gemini API guidelines. */
     return response.text || "Wayly is helping you find the most reliable path for your needs.";
-  } catch (error) {
+  } catch (error: any) {
     console.error("Gemini Error:", error);
-    return "Wayly recommends the most accessible path to ensure a smooth journey.";
+    
+    // Check for rate limit or quota errors (429)
+    if (error?.message?.includes('429') || error?.message?.includes('RESOURCE_EXHAUSTED')) {
+      return "AI insights are temporarily limited due to high demand. Please refer to local knowledge notes for accessibility details.";
+    }
+    
+    return "Wayly recommends the most accessible path based on your functional movement needs.";
   }
 };

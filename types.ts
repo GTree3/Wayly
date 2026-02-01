@@ -1,5 +1,6 @@
 
-export type UserSpeed = 'slow' | 'normal' | 'fast';
+/* Update UserSpeed to include 'comfortable' to match the UI and state initialization in App.tsx */
+export type UserSpeed = 'slow' | 'comfortable' | 'fast';
 
 export type MovementNeeds = {
   usesWheels: boolean;        // wheelchair, scooter, stroller

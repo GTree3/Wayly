@@ -472,52 +472,54 @@ export default function WaylyApp() {
               <button onClick={() => setView('search')} className="p-2.5 bg-gray-100 rounded-full text-gray-500"><X className="w-5 h-5" /></button>
             </div>
 
-            <div className="mb-5 bg-blue-600 rounded-[24px] p-4 flex gap-4 shadow-xl shadow-blue-50 relative">
-               <div className="shrink-0 p-2.5 bg-white/20 text-white rounded-2xl h-fit"><Info className="w-5 h-5" /></div>
-               <div>
-                  <h4 className="text-[10px] font-black text-white/70 uppercase tracking-widest mb-1">Wayly Insight</h4>
-                  <div className="text-[13px] text-white font-medium leading-tight min-h-[3em]">
-                    {loadingInsights ? (
-                      <span className="flex items-center gap-2 animate-pulse">
-                         Thinking...
-                      </span>
-                    ) : insights}
-                  </div>
-               </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 mb-6">
-              {routes.map(r => (
-                <div 
-                  key={r.type}
-                  onClick={() => setSelectedRestroom(r.target)}
-                  className={`flex flex-col p-4 rounded-3xl border-2 transition-all cursor-pointer ${activeTarget.properties.fid === r.target.properties.fid && (r.type === 'fastest' ? 'bg-blue-50 border-blue-600' : 'bg-green-50 border-green-600') || 'bg-white border-gray-100 opacity-60'}`}
-                >
-                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center mb-2 ${r.type === 'fastest' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600'}`}>
-                    {r.type === 'fastest' ? <Clock className="w-4 h-4" /> : <Accessibility className="w-4 h-4" />}
-                  </div>
-                  <div className="text-xl font-black text-gray-900">{r.duration}</div>
-                  <div className="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">{r.type === 'fastest' ? 'FASTEST' : 'ACCESSIBLE'}</div>
-                  <p className="text-[10px] font-bold text-gray-700 mt-2 line-clamp-1">{r.target.properties.name}</p>
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
+              <div className="mb-5 bg-blue-600 rounded-[24px] p-4 flex gap-4 shadow-xl shadow-blue-50 relative">
+                <div className="shrink-0 p-2.5 bg-white/20 text-white rounded-2xl h-fit"><Info className="w-5 h-5" /></div>
+                <div>
+                    <h4 className="text-[10px] font-black text-white/70 uppercase tracking-widest mb-1">Wayly Insight</h4>
+                    <div className="text-[13px] text-white font-medium leading-tight min-h-[3em]">
+                      {loadingInsights ? (
+                        <span className="flex items-center gap-2 animate-pulse">
+                          Thinking...
+                        </span>
+                      ) : insights}
+                    </div>
                 </div>
-              ))}
-            </div>
-
-            {profile.movement.maxWalkingDistance && activeTarget.properties.baseDistance && activeTarget.properties.baseDistance > profile.movement.maxWalkingDistance && (
-              <div className="bg-red-50 p-3 rounded-2xl border border-red-100 mb-4 flex gap-3 items-center">
-                <AlertCircle className="w-5 h-5 text-red-500" />
-                <p className="text-[11px] text-red-700 font-bold">Exceeds your preferred distance limit.</p>
               </div>
-            )}
 
-            <div className="bg-gray-50 p-3 rounded-2xl border border-gray-100 mb-6">
-              <h4 className="text-[10px] font-bold text-gray-400 uppercase mb-1">Local Knowledge</h4>
-              <p className="text-xs text-gray-700 leading-tight">"{activeTarget.properties.notes}"</p>
+              <div className="grid grid-cols-2 gap-3 mb-6">
+                {routes.map(r => (
+                  <div 
+                    key={r.type}
+                    onClick={() => setSelectedRestroom(r.target)}
+                    className={`flex flex-col p-4 rounded-3xl border-2 transition-all cursor-pointer ${activeTarget.properties.fid === r.target.properties.fid && (r.type === 'fastest' ? 'bg-blue-50 border-blue-600' : 'bg-green-50 border-green-600') || 'bg-white border-gray-100 opacity-60'}`}
+                  >
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center mb-2 ${r.type === 'fastest' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600'}`}>
+                      {r.type === 'fastest' ? <Clock className="w-4 h-4" /> : <Accessibility className="w-4 h-4" />}
+                    </div>
+                    <div className="text-xl font-black text-gray-900">{r.duration}</div>
+                    <div className="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">{r.type === 'fastest' ? 'FASTEST' : 'ACCESSIBLE'}</div>
+                    <p className="text-[10px] font-bold text-gray-700 mt-2 line-clamp-1">{r.target.properties.name}</p>
+                  </div>
+                ))}
+              </div>
+
+              {profile.movement.maxWalkingDistance && activeTarget.properties.baseDistance && activeTarget.properties.baseDistance > profile.movement.maxWalkingDistance && (
+                <div className="bg-red-50 p-3 rounded-2xl border border-red-100 mb-4 flex gap-3 items-center">
+                  <AlertCircle className="w-5 h-5 text-red-500" />
+                  <p className="text-[11px] text-red-700 font-bold">Exceeds your preferred distance limit.</p>
+                </div>
+              )}
+
+              <div className="bg-gray-50 p-3 rounded-2xl border border-gray-100 mb-6">
+                <h4 className="text-[10px] font-bold text-gray-400 uppercase mb-1">Local Knowledge</h4>
+                <p className="text-xs text-gray-700 leading-tight">"{activeTarget.properties.notes}"</p>
+              </div>
+
+              <button className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-lg flex items-center justify-center gap-3 shadow-xl active:scale-[0.98] transition-all">
+                <Navigation className="w-5 h-5 fill-current" /> START
+              </button>
             </div>
-
-            <button className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-lg flex items-center justify-center gap-3 shadow-xl active:scale-[0.98] transition-all">
-              <Navigation className="w-5 h-5 fill-current" /> START
-            </button>
           </div>
         )}
       </div>

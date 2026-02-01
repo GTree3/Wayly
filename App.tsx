@@ -472,7 +472,7 @@ export default function WaylyApp() {
               <button onClick={() => setView('search')} className="p-2.5 bg-gray-100 rounded-full text-gray-500"><X className="w-5 h-5" /></button>
             </div>
 
-            <div className="mb-5 bg-blue-600 rounded-[24px] p-4 flex gap-4 shadow-xl shadow-blue-50 relative overflow-hidden">
+            <div className="mb-5 bg-blue-600 rounded-[24px] p-4 flex gap-4 shadow-xl shadow-blue-50 relative">
                <div className="shrink-0 p-2.5 bg-white/20 text-white rounded-2xl h-fit"><Info className="w-5 h-5" /></div>
                <div>
                   <h4 className="text-[10px] font-black text-white/70 uppercase tracking-widest mb-1">Wayly Insight</h4>

@@ -429,7 +429,7 @@ export default function WaylyApp() {
 
         {view === 'home' && (
           <div className="px-6">
-            <h3 className="text-xl font-bold text-gray-900">Wayly - Accessibility Demo</h3>
+            <h3 className="text-xl font-bold text-gray-900">Wayly - Accessibility Demos</h3>
             <p className="text-xs text-gray-400 mt-1">Scarborough, ON</p>
             <div className="flex justify-around items-center border-t border-gray-100 mt-6 pt-4">
               <div className="flex flex-col items-center gap-1"><div className="p-1.5 text-blue-600 bg-blue-50 rounded-full"><MapPin className="w-6 h-6" /></div><span className="text-[10px] font-bold text-blue-600">Explore</span></div>

@@ -1,0 +1,7 @@
+{
+  "name": "Wayly - Accessibility Maps",
+  "description": "An accessibility-focused Google Maps overlay that uses Gemini AI to provide clear routing tradeoffs and find the most accessible restrooms based on user-specific needs.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
